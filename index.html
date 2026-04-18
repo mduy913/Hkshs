@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LUCKYWIN GLOBAL - LICENSED CASINO SYSTEM</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Goldman:wght@400;700&family=Orbitron:wght@400;900&family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #ffdf00; --gold-dark: #b8860b; --black: #050505;
+            --glass: rgba(255, 255, 255, 0.05); --success: #00ff88; --error: #ff3e3e;
+        }
+
+        /* --- NỀN TẢNG HẠ TẦNG (SERVER SIMULATION) --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { 
+            background: var(--black); color: #fff; margin: 0; padding: 0;
+            font-family: 'Montserrat', sans-serif; height: 100vh; overflow: hidden;
+            background-image: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+        }
+
+        /* --- GIAO DIỆN PHÁP LÝ & BẢO MẬT (SSL/KYC) --- */
+        .page { display: none; height: 100vh; width: 100vw; overflow-y: auto; padding-bottom: 120px; }
+        .active { display: block; animation: slideUp 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* AUTHENTICATION & KYC FORM */
+        .auth-overlay {
+            position: fixed; inset: 0; z-index: 9999; background: #000;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://i.imgur.com/e8pE8QY.jpeg') center/cover;
+        }
+        .auth-container {
+            width: 90%; max-width: 450px; background: rgba(10,10,10,0.95);
+            padding: 40px; border-radius: 30px; border: 2px solid var(--gold);
+            box-shadow: 0 0 50px rgba(255,223,0,0.2); backdrop-filter: blur(20px);
+        }
+        .auth-header h1 { font-family: 'Orbitron'; color: var(--gold); text-align: center; font-size: 28px; margin-bottom: 5px; }
+        .license-badges { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; opacity: 0.6; }
+        .badge { font-size: 9px; border: 1px solid #444; padding: 2px 5px; border-radius: 4px; }
+
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+        .input-group input, .input-group select {
+            width: 100%; padding: 15px; background: #111; border: 1px solid #333;
+            border-radius: 12px; color: #fff; font-weight: bold; font-size: 15px;
+        }
+
+        /* --- HỆ THỐNG TÀI CHÍNH (WALLET) --- */
+        .wallet-card {
+            background: linear-gradient(135deg, #1a1a1a, #000); border-radius: 25px;
+            padding: 25px; margin: 20px; border: 1px solid #222; position: relative;
+            overflow: hidden;
+        }
+        .wallet-card::before {
+            content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: conic-gradient(transparent, transparent, var(--gold), transparent);
+            animation: rotate 4s linear infinite; opacity: 0.1;
+        }
+        @keyframes rotate { 100% { transform: rotate(360deg); } }
+
+        /* --- GAME & RNG SYSTEM --- */
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
+        .game-item {
+            background: #111; border-radius: 20px; padding: 20px; text-align: center;
+            border: 1px solid #222; transition: 0.3s;
+        }
+        .game-item:active { transform: scale(0.95); border-color: var(--gold); }
+        .game-item img { width: 60px; filter: drop-shadow(0 0 10px var(--gold)); }
+
+        /* --- ADMIN PANEL (SECURITY LOGS) --- */
+        #admin-panel {
+            position: fixed; inset: 0; z-index: 10000; background: #050505;
+            padding: 20px; display: none; overflow-y: auto;
+        }
+        .log-item { font-family: monospace; font-size: 10px; color: var(--success); margin-bottom: 5px; border-bottom: 1px solid #222; }
+
+        /* --- LEGAL FOOTER --- */
+        .legal-footer {
+            padding: 20px; text-align: center; font-size: 10px; color: #444;
+            line-height: 1.6; border-top: 1px solid #111; margin-top: 20px;
+        }
+
+        /* BUTTONS */
+        .btn-gold {
+            width: 100%; padding: 18px; background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+            border: none; border-radius: 12px; font-weight: 900; color: #000;
+            text-transform: uppercase; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="p-auth" class="auth-overlay">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h1 onclick="secretAdmin()">LUCKYWIN GLOBAL</h1>
+                <div class="license-badges">
+                    <span class="badge">MALTA MGA</span>
+                    <span class="badge">CURACAO GLH</span>
+                    <span class="badge">18+ ONLY</span>
+                </div>
+            </div>
+
+            <div id="form-login">
+                <div class="input-group">
+                    <label>Tài khoản người chơi</label>
+                    <input type="text" id="l-u" placeholder="Nhập ID người dùng">
+                </div>
+                <div class="input-group">
+                    <label>Mật khẩu mã hóa SSL</label>
+                    <input type="password" id="l-p" placeholder="••••••••">
+                </div>
+                <button class="btn-gold" onclick="actionLogin()">ĐĂNG NHẬP HỆ THỐNG</button>
+                <p style="text-align:center; font-size:12px; color:#555; margin-top:20px;" onclick="toggleAuth(false)">Bạn là người chơi mới? <b style="color:var(--gold)">Đăng ký tại đây</b></p>
+            </div>
+
+            <div id="form-reg" style="display:none;">
+                <div class="input-group"><input type="text" id="r-u" placeholder="Tạo ID người dùng"></div>
+                <div class="input-group"><input type="password" id="r-p" placeholder="Tạo mật khẩu bảo mật"></div>
+                <div class="input-group">
+                    <label>Xác minh danh tính (KYC)</label>
+                    <select id="r-kyc"><option>Chứng minh nhân dân / CCCD</option><option>Hộ chiếu (Passport)</option></select>
+                </div>
+                <button class="btn-gold" onclick="actionRegister()">XÁC NHẬN ĐIỀU KHOẢN & ĐK</button>
+                <p style="text-align:center; font-size:12px; color:#555; margin-top:20px;" onclick="toggleAuth(true)">Đã có tài khoản? <b style="color:var(--gold)">Đăng nhập</b></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="p-lobby" class="page">
+        <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <b style="font-family:'Orbitron'; color:var(--gold);">GLOBAL SYSTEM</b>
+            <div style="font-size: 12px; color: var(--success);">● SECURE SERVER</div>
+        </div>
+
+        <div class="wallet-card">
+            <div style="font-size: 12px; color: #888;">TỔNG SỐ DƯ (ENCRYPTED WALLET)</div>
+            <div style="font-size: 32px; font-weight: 900; color: var(--gold); font-family: 'Orbitron'; margin: 10px 0;">
+                <span id="bal-val">0</span> <small style="font-size:12px;">VND</small>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button style="flex:1; padding: 10px; border-radius:10px; background:var(--gold); border:none; font-weight:900;" onclick="showPage('p-deposit')">NẠP TIỀN</button>
+                <button style="flex:1; padding: 10px; border-radius:10px; background:#222; color:#fff; border:1px solid #444;" onclick="showPage('p-withdraw')">RÚT TIỀN</button>
+            </div>
+        </div>
+
+        <div class="game-grid">
+            <div class="game-item" onclick="showPage('p-game')">
+                <img src="https://img.icons8.com/fluency/96/dice.png">
+                <h4 style="margin:10px 0 0; font-size:12px;">TÀI XỈU MD5</h4>
+            </div>
+            <div class="game-item" style="opacity:0.3;">
+                <img src="https://img.icons8.com/fluency/96/poker-cards.png">
+                <h4 style="margin:10px 0 0; font-size:12px;">BACCARAT LIVE</h4>
+            </div>
+            <div class="game-item" style="opacity:0.3;">
+                <img src="https://img.icons8.com/fluency/96/roulette.png">
+                <h4 style="margin:10px 0 0; font-size:12px;">ROULETTE VIP</h4>
+            </div>
+            <div class="game-item" style="opacity:0.3;">
+                <img src="https://img.icons8.com/fluency/96/slot-machine.png">
+                <h4 style="margin:10px 0 0; font-size:12px;">SLOT 777</h4>
+            </div>
+        </div>
+
+        <div class="legal-footer">
+            LUCKYWIN GLOBAL OPERATED BY SUPREME ENTERTAINMENT LTD.<br>
+            LICENSED AND REGULATED BY THE GOVERNMENT OF CURACAO (LICENSE NO. 1668/JAZ).<br>
+            ANTI-MONEY LAUNDERING (AML) COMPLIANT. 256-BIT SSL ENCRYPTION ACTIVE.
+        </div>
+    </div>
+
+    <div id="p-deposit" class="page">
+        <div style="padding: 20px; border-bottom:1px solid #222;">
+            <span onclick="showPage('p-lobby')">❮ QUAY LẠI</span>
+            <h2 style="text-align:center; color:var(--gold);">NẠP TIỀN TỰ ĐỘNG</h2>
+        </div>
+        <div style="padding: 20px;">
+            <div class="input-group">
+                <label>Chọn cổng thanh toán</label>
+                <select class="input-box" onchange="genQR(this.value)">
+                    <option value="900000">VIETQR (NGÂN HÀNG)</option>
+                    <option value="500000">MOMO PAY</option>
+                    <option value="1000000">USDT (TRC20)</option>
+                </select>
+            </div>
+            <div style="background:#fff; padding:15px; border-radius:20px; width:250px; height:250px; margin:20px auto;">
+                <img id="deposit-qr" src="" style="width:100%;">
+            </div>
+            <p style="text-align:center; font-size:12px; color:#888;">Hệ thống sẽ tự động quét giao dịch và cộng tiền trong 30 giây.</p>
+        </div>
+    </div>
+
+    <div id="p-withdraw" class="page">
+        <div style="padding: 20px; border-bottom:1px solid #222;">
+            <span onclick="showPage('p-lobby')">❮ QUAY LẠI</span>
+            <h2 style="text-align:center; color:var(--gold);">LỆNH RÚT TIỀN</h2>
+        </div>
+        <div style="padding: 20px;">
+            <div class="input-group"><input type="text" id="w-bank" placeholder="Tên ngân hàng thụ hưởng"></div>
+            <div class="input-group"><input type="text" id="w-stk" placeholder="Số tài khoản nhận tiền"></div>
+            <div class="input-group"><input type="text" id="w-name" placeholder="Tên chủ tài khoản (In hoa)"></div>
+            <div class="input-group"><input type="number" id="w-amt" placeholder="Số tiền rút (Tối thiểu 100,000)"></div>
+            <button class="btn-gold" onclick="actionWithdraw()">GỬI YÊU CẦU XÉT DUYỆT</button>
+            <p style="font-size:11px; color:#ff3e3e; margin-top:15px; text-align:center;">* Hệ thống sẽ kiểm tra lịch sử cược (Anti-Cheat) trước khi giải ngân.</p>
+        </div>
+    </div>
+
+    <div id="admin-panel">
+        <h2 style="color:var(--gold);">HỆ THỐNG QUẢN TRỊ (SUPER ADMIN)</h2>
+        <div id="adm-logs" style="background:#000; padding:10px; border-radius:10px; height:200px; overflow:scroll; margin-bottom:20px;">
+            <div class="log-item">[SECURE] System firewall active...</div>
+            <div class="log-item">[DATABASE] Connected to Firebase Asia-1...</div>
+        </div>
+        <div class="input-group"><input type="text" id="adm-target" placeholder="ID khách hàng"></div>
+        <div class="input-group"><input type="number" id="adm-val" placeholder="Số tiền cộng/trừ"></div>
+        <button class="btn-gold" onclick="admUpdate()">CẬP NHẬT SỐ DƯ</button>
+        <button class="btn-gold" style="background:#333; color:#fff; margin-top:10px;" onclick="closeAdmin()">THOÁT ADMIN</button>
+    </div>
+
+<script>
+    // --- FIREBASE CONFIGURATION (PHẢI THAY BẰNG CỦA SẾP) ---
+    const firebaseConfig = { databaseURL: "https://shopmduy-default-rtdb.asia-southeast1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentUser = null;
+    let balance = 0;
+    let admCount = 0;
+
+    // --- HỆ THỐNG ĐIỀU HƯỚNG ---
+    function showPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        admCount = 0;
+    }
+
+    function toggleAuth(isLogin) {
+        document.getElementById('form-login').style.display = isLogin ? 'block' : 'none';
+        document.getElementById('form-reg').style.display = isLogin ? 'none' : 'block';
+    }
+
+    // --- LOGIC ĐĂNG KÝ / ĐĂNG NHẬP (KYC SIMULATION) ---
+    function actionRegister() {
+        const u = document.getElementById('r-u').value.trim().toLowerCase();
+        const p = document.getElementById('r-p').value;
+        if(u.length < 5) return alert("ID người dùng phải ít nhất 5 ký tự!");
+        db.ref('users/'+u).once('value', s => {
+            if(s.exists()) alert("ID này đã tồn tại trên hệ thống!");
+            else {
+                db.ref('users/'+u).set({ password: p, balance: 100000, kyc: 'VERIFIED' }).then(() => {
+                    alert("Đăng ký thành công! Chào mừng bạn đến với LuckyWin Global.");
+                    toggleAuth(true);
+                });
+            }
+        });
+    }
+
+    function actionLogin() {
+        const u = document.getElementById('l-u').value.trim().toLowerCase();
+        const p = document.getElementById('l-p').value;
+        db.ref('users/'+u).once('value', s => {
+            if(s.exists() && s.val().password === p) {
+                currentUser = u;
+                initUser();
+                document.getElementById('p-auth').style.display = 'none';
+                showPage('p-lobby');
+            } else alert("Sai thông tin đăng nhập hoặc tài khoản bị khóa!");
+        });
+    }
+
+    // --- KHỞI TẠO USER & VÍ ---
+    function initUser() {
+        db.ref('users/'+currentUser).on('value', s => {
+            balance = s.val().balance || 0;
+            document.getElementById('bal-val').innerText = balance.toLocaleString();
+        });
+        genQR(500000); // Mặc định nạp 500k
+    }
+
+    // --- TÀI CHÍNH: NẠP & RÚT ---
+    function genQR(amt) {
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=247-LUCKYWIN-${currentUser}-${amt}`;
+        document.getElementById('deposit-qr').src = qrUrl;
+    }
+
+    function actionWithdraw() {
+        const amt = parseInt(document.getElementById('w-amt').value);
+        if(amt < 100000) return alert("Số tiền rút tối thiểu là 100,000 VND");
+        if(amt > balance) return alert("Số dư khả dụng không đủ!");
+        
+        db.ref('users/'+currentUser+'/balance').transaction(v => v - amt);
+        db.ref('logs/withdraws').push({
+            user: currentUser, amount: amt, time: Date.now(), status: 'PENDING_KYC'
+        });
+        alert("Lệnh rút tiền đã được gửi. Hệ thống đang xác minh danh tính và lịch sử cược.");
+    }
+
+    // --- CỬA HẬU ADMIN (BẢO MẬT CAO) ---
+    function secretAdmin() {
+        admCount++;
+        if(admCount >= 7) {
+            document.getElementById('admin-panel').style.display = 'block';
+            addLog("ACCESS GRANTED: SUPER ADMIN MODE");
+        }
+    }
+
+    function addLog(msg) {
+        const log = document.getElementById('adm-logs');
+        log.innerHTML += `<div class="log-item">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function admUpdate() {
+        const target = document.getElementById('adm-target').value;
+        const val = parseInt(document.getElementById('adm-val').value);
+        db.ref('users/'+target+'/balance').transaction(v => (v||0) + val);
+        addLog(`UPDATED BALANCE FOR USER ${target}: ${val}`);
+    }
+
+    function closeAdmin() {
+        document.getElementById('admin-panel').style.display = 'none';
+        admCount = 0;
+    }
+</script>
+</body>
+</html>
